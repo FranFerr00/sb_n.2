@@ -1,0 +1,47 @@
+
+import("sbic2.lib");
+
+trackGroup(x) = hgroup("[0]dflTrack",x);
+
+//============================================================
+dflrwdev2 = environment {
+//----------
+freqrwDEFAULT = 5;
+tauDEFAULT = 911;
+maxrwDEFAULT = 201;
+gain_fbDEFAULT = 0.973;
+//----------
+dflgroup(x) = trackGroup(vgroup("[0]dfl", x));
+ta = dflgroup(hslider("[1]tau", tauDEFAULT, 1, 10000, 1));
+frw= dflgroup(hslider("[2]freqrw", freqrwDEFAULT, 0, 10, 0.001));
+maxf = dflgroup(hslider("[4]maxrw",maxrwDEFAULT,0, 1000, 1));
+tog=dflgroup(hslider("input_dev",0,0,1,0.01));
+g1=dflgroup(hslider("gain_fb",gain_fbDEFAULT,0.0001,1,0.0001));
+dev=dflgroup(hslider("deviation", 0, 0, 1, 0.001):si.smoo);
+//----------
+tau=ta+rndw(frw,-1,1,0,maxf+dev*ma.SR,0.4)+(dev*ma.SR);
+dflrwdev2=_:dflcvm(ma.SR*10,tau,g1);
+};
+//============================================================
+
+
+
+
+
+//============================================================
+apfrwdev = environment {
+//----------
+freqrwDEFAULT = 2.19;
+tauDEFAULT = 501;
+maxrwDEFAULT = 807;
+//----------
+apfgroup(x) = trackGroup(vgroup("[1]apf", x));
+t = apfgroup(hslider("tau", tauDEFAULT, 1, 1000, 1));
+g= apfgroup(hslider("gain", 0, -1, 1, 0.01):si.smoo);
+frw= apfgroup(hslider("freqrw", freqrwDEFAULT, 0, 10, 0.001));
+maxf = apfgroup(hslider("maxrw",maxrwDEFAULT, 0, 1000, 1));
+//----------
+tau=t+rndw(frw,-1,1,0,maxf,0.01);
+apfrwdev=seq(i,12,apfvm(ma.SR*5,tau,1/sqrt(2)));
+};
+//============================================================

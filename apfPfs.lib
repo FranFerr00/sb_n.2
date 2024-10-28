@@ -1,0 +1,67 @@
+import("stdfaust.lib");
+import("sbic2.lib");
+trackGroup(x) = vgroup("[0]apfpfsTrack",x);
+//============================================================
+distorsion = environment {
+//----------
+distorsionGroup(x) =trackGroup(vgroup("[0]distorsion",x));
+    gainDEFAULT = 0.8;
+gain = distorsionGroup(hslider("gain", gainDEFAULT, 0, 1,0.01) : si.smoo);
+//----------
+distorsion=_<:_*(1-gain)+_*gain*10:ma.tanh/sqrt(2);
+};
+//============================================================
+
+
+
+schroederrwdev = environment{
+freqDEFAULT =8;
+gainDEFAULT = 0.89;
+tauDEFAULT = 8432;
+schroederrwdevGroup(x) = trackGroup(vgroup("[1]schroederrwdev",x));
+dev=schroederrwdevGroup((hslider("deviation", 0, 0, 1, 0.001):si.smoo));
+t = schroederrwdevGroup(nentry("tau", tauDEFAULT, 1, 10000, 1));
+g=schroederrwdevGroup(hslider("gain",gainDEFAULT,0,1,0.01));
+frw=schroederrwdevGroup(hslider("freq", freqDEFAULT, 0.01, 10, 0.01));
+maxi = ma.SR/schroederrwdevGroup(hslider("scale maxi samps", 5, 1, 10,.01):si.smoo);
+dfl(y,rwa)= y : dflcvm(ma.SR*2,(t+rwa+dev*maxi),g);
+apfprw(rwa)= _ : apfvm(ma.SR*2,((t+rwa+dev*maxi)),1/sqrt(2));
+allPassSeq(sigDfl,no1,no2,no3,no4) = apfprw(no1,sigDfl) : apfprw(no2) : apfprw(no3): apfprw(no4); 
+schroederrw2(sig) = rndwmc(frw,-1,1,0,100):(par(i,4,dfl(sig)):> _),si.bus(4):allPassSeq;
+};
+
+
+
+//============================================================
+
+rmMod = environment{
+//----------
+rmGroup(x) = trackGroup(vgroup("[2]rm",x));
+gainDEFAULT = 2;
+freqpDEFAULT =50.2;
+//----------
+freq=rmGroup(hslider("[0]freqp",freqpDEFAULT,1,100,0.001):si.smoo);
+g= rmGroup(hslider("[1]gain", gainDEFAULT, 0, 2, 0.01):si.smoo);
+//----------
+fig=1.5;
+frw= 100;
+maxf = 10;
+n4=rndw(frw,-1,1,0,maxf,0.3);
+irr(x)=_*ba.pulsen(10,ma.SR/(freq+(devfi(500,50,x)))):(abs(_)*(n4*fig+(devfi(400,50,x))*0.01):(+ ~ de.sdelay(ma.SR,ma.SR/2,ba.sec2samp(n4*fig*0.01)): (_ %(1000+n4*fig*0.01))):_ %1):fi.dcblocker:_*g;
+rmMod=_<:_*irr;
+};
+//============================================================
+
+
+apfpfs=environment{
+    apfpfsGroup(x)=trackGroup(vgroup("[3]apfpfs",x));
+    t1DEFAULT=55;
+    t2DEFAULT=91;
+    t1 = apfpfsGroup(hslider("tau1", t1DEFAULT, 1, 1000, 2));
+    t2 = apfpfsGroup(hslider("tau2", t2DEFAULT,1, 1000, 2));
+    dev=apfpfsGroup(hslider("deviation", 0, 0, 1, 0.001):si.smoo);
+    g1=1/sqrt(2) ;
+    apfv(t1)=seq(i,5,apfvm(ma.SR,t1+dev*3000,1/sqrt(2)));
+    apfpfs(t1,t2)=_<:*(-g1)+(+~(( de.sdelay(ma.SR,512,t2+dev*2000):apfv(t1)):_*g1):*(1-g1*g1));
+    apfpfs_seq= seq(i,12,_:apfpfs(t1,t2));
+};

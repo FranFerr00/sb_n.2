@@ -1,0 +1,17 @@
+import("sbic2.lib");
+
+schroederrwdev = environment{
+freqDEFAULT =5;
+gainDEFAULT = 0.64;
+tauDEFAULT = 3621;
+schroederrwdevGroup(x) = vgroup("[0]schroederrwdev",x);
+dev=schroederrwdevGroup(hslider("deviation", 0, 0, 1, 0.001):si.smoo);
+t = schroederrwdevGroup(nentry("tau", tauDEFAULT, 1, 10000, 1));
+g=schroederrwdevGroup(hslider("gain",gainDEFAULT,0,1,0.01));
+frw=schroederrwdevGroup(hslider("freq", freqDEFAULT, 0.01, 10, 0.01));
+maxi = ma.SR/(schroederrwdevGroup(hslider("scale maxi samps", 5, 1, 10,.01):si.smoo));
+dfl(y,rwa)= y : dflcvm(ma.SR*2,(t+rwa+dev*maxi),g);
+apfprw(rwa)= _ : apfvm(ma.SR*2,((t+rwa+dev*maxi)),1/sqrt(2));
+allPassSeq(sigDfl,no1,no2,no3,no4) = apfprw(no1,sigDfl) : apfprw(no2) : apfprw(no3): apfprw(no4); 
+schroederrw2(sig) = rndwmc(frw,-1,1,0,100):(par(i,4,dfl(sig)):> _),si.bus(4):allPassSeq;
+};
